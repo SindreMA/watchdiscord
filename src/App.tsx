@@ -43,14 +43,14 @@ function App({ width, height } : IAppProps) {
     if (mounted.current) return;
     mounted.current = true
 
-    axios.get("http://api.sindrema.com/api/Juky/watch/" + guildId).then(res => {
+    axios.get("https://api.sindrema.com/api/Juky/watch/" + guildId).then(res => {
       setEvents(res.data)
     })
 
 
 
     var connection = new signalR.HubConnectionBuilder()
-    .withUrl("http://api.sindrema.com/JukyHub")
+    .withUrl("https://api.sindrema.com/JukyHub")
     .configureLogging(signalR.LogLevel.Information)
     .build();
 
