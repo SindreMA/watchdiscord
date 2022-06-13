@@ -81,10 +81,12 @@ function App({ width, height } : IAppProps) {
       const lastItem = data
       if (lastItem) {
         if (lastItem.type == 'play') {
-          const video = `https://sindrema.com/files/stream/${lastItem.friendlyName}${lastItem.fileType}`
+          const video = `http://stream.sindrema.com/${encodeURIComponent(lastItem.friendlyName)}${lastItem.fileType}`
           setVideo(video)
           player.current?.load()
           setTimeout(() => {
+            console.log("eevent seek", (Date.now() - lastItem.started) / 1000);
+            
             player.current?.seek((Date.now() - lastItem.started) / 1000)
             player.current?.play()  
             
@@ -98,6 +100,9 @@ function App({ width, height } : IAppProps) {
     }
   }, [events])
   
+  const startTime = (Date.now() - events[events.length -1]?.started) / 1000
+  console.log({startTime});
+  
   return (
     <q.div f1 w100 fccc >
       <q.div f1 w100 fctc>
@@ -108,7 +113,7 @@ function App({ width, height } : IAppProps) {
           fluid={false}
           muted={true}
           playsInline
-          startTime={(Date.now() - events[events.length -1]?.started) / 1000}
+          startTime={startTime}
           src={video}
         />
       </q.div>
