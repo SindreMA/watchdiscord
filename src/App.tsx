@@ -81,7 +81,7 @@ function App({ width, height } : IAppProps) {
       const lastItem = data
       if (lastItem) {
         if (lastItem.type == 'play') {
-          const video = `http://stream.sindrema.com/${encodeURIComponent(lastItem.friendlyName)}${lastItem.fileType}`
+          const video = `https://stream.sindrema.com/${encodeURIComponent(lastItem.friendlyName)}${lastItem.fileType}`
           setVideo(video)
           player.current?.load()
           setTimeout(() => {
