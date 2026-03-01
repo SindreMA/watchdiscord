@@ -124,6 +124,10 @@ export default function App() {
 
   // Video
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Sync state: set when a new play event starts; cleared once playback is confirmed in-sync
+  const syncRef = useRef<{ started: number; needSeek: boolean; needFinalSync: boolean }>({
+    started: 0, needSeek: false, needFinalSync: false,
+  });
   const [videoSrc, setVideoSrc] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -209,17 +213,14 @@ export default function App() {
   const handlePlayEvent = useCallback((item: QueueItem) => {
     const src = item.streamUrl ||
       `https://stream.sindrema.com/${encodeURIComponent(item.friendlyName)}${item.fileType}`;
+    // Mark that we need to seek once the video can play; seek time is calculated
+    // at that moment so it accounts for all network/buffering delay.
+    syncRef.current = { started: item.started, needSeek: true, needFinalSync: false };
     setVideoSrc(src);
     setCurrentTitle(decodeTitle(item.friendlyName));
     setCurrentYtUrl(item.youtubeUrl || '');
     setIsPlaying(true);
     setIsPaused(false);
-    setTimeout(() => {
-      const vid = videoRef.current;
-      if (!vid) return;
-      vid.currentTime = Math.max(0, (Date.now() - item.started) / 1000);
-      vid.play().catch(() => {});
-    }, 200);
   }, []);
 
   // ─── SignalR + init ───────────────────────────────────────────────────────────
@@ -294,6 +295,7 @@ export default function App() {
         addToast('▶  Playback resumed', 'info');
         loadLogs();
       } else if (data.type === 'stop') {
+        syncRef.current = { started: 0, needSeek: false, needFinalSync: false };
         const vid = videoRef.current;
         if (vid) { vid.pause(); vid.src = ''; }
         setVideoSrc('');
@@ -477,6 +479,23 @@ export default function App() {
                 muted={muted}
                 onTimeUpdate={(e: React.SyntheticEvent<HTMLVideoElement>) => setCurrentTime(e.currentTarget.currentTime)}
                 onDurationChange={(e: React.SyntheticEvent<HTMLVideoElement>) => setDuration(e.currentTarget.duration)}
+                onCanPlay={(e: React.SyntheticEvent<HTMLVideoElement>) => {
+                  if (!syncRef.current.needSeek) return;
+                  syncRef.current.needSeek = false;
+                  syncRef.current.needFinalSync = true;
+                  const vid = e.currentTarget;
+                  vid.currentTime = Math.max(0, (Date.now() - syncRef.current.started) / 1000);
+                  vid.play().catch(() => {});
+                }}
+                onPlaying={(e: React.SyntheticEvent<HTMLVideoElement>) => {
+                  if (!syncRef.current.needFinalSync) return;
+                  syncRef.current.needFinalSync = false;
+                  const vid = e.currentTarget;
+                  const expected = Math.max(0, (Date.now() - syncRef.current.started) / 1000);
+                  if (Math.abs(vid.currentTime - expected) > 0.3) {
+                    vid.currentTime = expected;
+                  }
+                }}
               />
             : (
               <div className="video-empty">
