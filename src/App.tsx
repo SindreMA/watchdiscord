@@ -111,8 +111,9 @@ export default function App() {
 
   // Username
   const [username, setUsername] = useState(localStorage.getItem('juky_username') || '');
-  const [showModal, setShowModal] = useState(!localStorage.getItem('juky_username'));
-  const [nameInput, setNameInput] = useState('');
+  const [nameInput, setNameInput] = useState(localStorage.getItem('juky_username') || '');
+  const [editingName, setEditingName] = useState(!localStorage.getItem('juky_username'));
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Video
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -291,7 +292,13 @@ export default function App() {
   // ─── Controls ─────────────────────────────────────────────────────────────────
 
   const requireUser = () => {
-    if (!username) { setShowModal(true); return false; }
+    if (!username) {
+      setSidebarOpen(true);
+      setEditingName(true);
+      setTimeout(() => nameInputRef.current?.focus(), 50);
+      addToast('Set your name first', 'warning');
+      return false;
+    }
     return true;
   };
 
@@ -387,14 +394,14 @@ export default function App() {
     }
   };
 
-  // ─── Username modal ───────────────────────────────────────────────────────────
+  // ─── Username ─────────────────────────────────────────────────────────────────
 
   const confirmName = () => {
     const name = nameInput.trim();
     if (!name) return;
     localStorage.setItem('juky_username', name);
     setUsername(name);
-    setShowModal(false);
+    setEditingName(false);
   };
 
   // ─── Section toggle ───────────────────────────────────────────────────────────
@@ -410,27 +417,6 @@ export default function App() {
 
   return (
     <div className="app">
-
-      {/* Username modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-icon">🎮</div>
-            <h2>Welcome to Juky Watch</h2>
-            <p>Enter your name so others can see who's controlling the bot.</p>
-            <input
-              autoFocus
-              type="text"
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && confirmName()}
-              placeholder="Your name…"
-              maxLength={32}
-            />
-            <button className="btn-primary" onClick={confirmName}>Let's go</button>
-          </div>
-        </div>
-      )}
 
       <div className="layout">
 
@@ -474,9 +460,27 @@ export default function App() {
               <span className="brand-icon">🎮</span>
               <span className="brand-name">Juky</span>
             </div>
-            <button className="username-btn" onClick={() => setShowModal(true)}>
-              {username || 'Set name'}
-            </button>
+            {editingName ? (
+              <div className="name-form">
+                <input
+                  ref={nameInputRef}
+                  className="name-input"
+                  type="text"
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && confirmName()}
+                  onBlur={() => { if (username) setEditingName(false); }}
+                  placeholder="Your name…"
+                  maxLength={32}
+                  autoFocus
+                />
+                <button className="name-save-btn" onClick={confirmName} title="Save">✓</button>
+              </div>
+            ) : (
+              <button className="username-btn" onClick={() => { setNameInput(username); setEditingName(true); }}>
+                {username} <span className="edit-icon">✎</span>
+              </button>
+            )}
           </div>
 
           <div className="sidebar-content">

@@ -161,15 +161,53 @@
   border-radius: 20px;
   color: var(--text-muted);
   font-size: 12px;
-  padding: 4px 12px;
+  padding: 4px 10px;
   cursor: pointer;
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .username-btn:hover { color: var(--text); border-color: var(--accent); }
+.edit-icon { opacity: 0.5; font-size: 11px; }
+.username-btn:hover .edit-icon { opacity: 1; }
+
+.name-form {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  max-width: 160px;
+}
+.name-input {
+  flex: 1;
+  background: var(--surface3);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.name-input::placeholder { color: var(--text-muted); }
+.name-save-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+.name-save-btn:hover { opacity: 0.85; }
 
 .sidebar-content {
   flex: 1;
@@ -572,47 +610,6 @@
   padding: 14px 0;
 }
 
-/* ─── Modal ─────────────────────────────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.78);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  backdrop-filter: blur(6px);
-}
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 36px 32px;
-  width: 340px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-.modal-icon { font-size: 44px; line-height: 1; }
-.modal h2 { margin: 0; font-size: 20px; font-weight: 600; }
-.modal p { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
-.modal input {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--text);
-  padding: 10px 13px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.15s;
-  font-family: inherit;
-}
-.modal input:focus { border-color: var(--accent); }
-.modal input::placeholder { color: var(--text-muted); }
 
 /* ─── Toast Notifications ───────────────────────────────────────────────────── */
 .toasts {
