@@ -32,6 +32,9 @@ interface SearchResult {
   duration: string;
   uploader: string;
   url: string;
+  view_count?: number;
+  upload_date?: string;
+  description?: string;
 }
 
 interface Sound {
@@ -80,6 +83,18 @@ function formatDuration(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatViews(n?: number): string {
+  if (!n) return '';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M views`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K views`;
+  return `${n} views`;
+}
+
+function formatUploadDate(d?: string): string {
+  if (!d || d.length !== 8) return '';
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 }
 
 // ─── SidebarSection ──────────────────────────────────────────────────────────
@@ -137,12 +152,15 @@ export default function App() {
 
   // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(310);
+  const [isResizing, setIsResizing] = useState(false);
   const [openSections, setOpenSections] = useState<Set<string>>(
     () => new Set(['controls', 'search', 'sounds', 'tts', 'queue', 'logs'])
   );
 
-  // Video mute
+  // Video mute & volume
   const [muted, setMuted] = useState(true);
+  const [volume, setVolume] = useState(0.5);
   const [clickIcon, setClickIcon] = useState<'play' | 'pause' | null>(null);
   const clickIconTimeout = useRef<ReturnType<typeof setTimeout>>();
 
@@ -378,6 +396,15 @@ export default function App() {
     setMuted(next);
   };
 
+  const handleVolume = (val: number) => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.volume = val;
+    setVolume(val);
+    if (val > 0 && vid.muted) { vid.muted = false; setMuted(false); }
+    if (val === 0) { vid.muted = true; setMuted(true); }
+  };
+
   const progressRef = useRef<HTMLDivElement>(null);
 
   const seekToRatio = useCallback((clientX: number) => {
@@ -395,6 +422,23 @@ export default function App() {
   const onProgressPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.buttons === 1) seekToRatio(e.clientX);
   };
+
+  // ─── Sidebar resize ─────────────────────────────────────────────────────────
+
+  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsResizing(true);
+  }, []);
+
+  const onResizePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.buttons !== 1) return;
+    setSidebarWidth(window.innerWidth - e.clientX);
+  }, []);
+
+  const onResizePointerUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
 
   // ─── YouTube search ───────────────────────────────────────────────────────────
 
@@ -528,6 +572,15 @@ export default function App() {
                     vid.currentTime = expected;
                   }
                 }}
+                onEnded={() => {
+                  syncRef.current = { started: 0, needSeek: false, needFinalSync: false };
+                  setVideoSrc('');
+                  setIsPlaying(false);
+                  setIsPaused(false);
+                  setCurrentTitle('');
+                  setCurrentTime(0);
+                  setDuration(0);
+                }}
                 onClick={handleVideoClick}
               />
             : (
@@ -586,7 +639,42 @@ export default function App() {
         </div>
 
         {/* Sidebar */}
-        <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
+        <aside
+          className={`sidebar${sidebarOpen ? ' open' : ''}${isResizing ? ' resizing' : ''}`}
+          style={sidebarOpen ? { width: sidebarWidth } : undefined}
+        >
+          {/* Resize handle */}
+          <div
+            className="sidebar-resize-handle"
+            onPointerDown={onResizePointerDown}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={onResizePointerUp}
+          />
+          {/* First-time username overlay */}
+          {!username && (
+            <div className="username-overlay">
+              <div className="username-overlay-card">
+                <div className="username-overlay-icon">🎮</div>
+                <h2 className="username-overlay-title">Welcome to Juky</h2>
+                <p className="username-overlay-sub">Enter your name to get started</p>
+                <input
+                  ref={nameInputRef}
+                  className="username-overlay-input"
+                  type="text"
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && confirmName()}
+                  placeholder="Your name…"
+                  maxLength={32}
+                  autoFocus
+                />
+                <button className="username-overlay-btn" onClick={confirmName} disabled={!nameInput.trim()}>
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="sidebar-head">
             <div className="sidebar-brand">
               <span className="brand-icon">🎮</span>
@@ -631,6 +719,19 @@ export default function App() {
                 <span className="status-dot" />
                 {isPlaying ? (isPaused ? 'Paused' : 'Playing') : 'Idle'}
               </div>
+              <div className="volume-row">
+                <label className="volume-label">Volume</label>
+                <input
+                  className="volume-slider"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={muted ? 0 : volume}
+                  onChange={e => handleVolume(parseFloat(e.target.value))}
+                />
+                <span className="volume-pct">{muted ? 0 : Math.round(volume * 100)}%</span>
+              </div>
               <div className="offset-row">
                 <label className="offset-label" htmlFor="offset-input">Sync offset</label>
                 <input
@@ -663,11 +764,22 @@ export default function App() {
               <div className="search-results">
                 {searchLoading && <div className="loading-row">Searching…</div>}
                 {searchResults.map(r => (
-                  <div className="search-result" key={r.id}>
-                    <img className="result-thumb" src={r.thumbnail} alt="" loading="lazy" />
-                    <div className="result-info">
+                  <div className="search-result-card" key={r.id}>
+                    <div className="result-thumb-wrap">
+                      <img className="result-thumb" src={r.thumbnail} alt="" loading="lazy" />
+                      {r.duration && <span className="result-duration">{r.duration}</span>}
+                    </div>
+                    <div className="result-details">
                       <div className="result-title">{r.title}</div>
-                      <div className="result-meta">{r.uploader}{r.duration ? ` · ${r.duration}` : ''}</div>
+                      <div className="result-channel">{r.uploader}</div>
+                      <div className="result-meta">
+                        {formatViews(r.view_count)}
+                        {r.view_count && r.upload_date ? ' · ' : ''}
+                        {formatUploadDate(r.upload_date)}
+                      </div>
+                      {r.description && (
+                        <div className="result-desc">{r.description.slice(0, 100)}{r.description.length > 100 ? '…' : ''}</div>
+                      )}
                     </div>
                     <button className="result-add" onClick={() => handleQueue(r.url, r.title)} title="Add to queue">+</button>
                   </div>
