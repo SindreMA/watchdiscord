@@ -98,6 +98,32 @@
 }
 .video-ytlink:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
 
+/* ─── Mute Button ───────────────────────────────────────────────────────────── */
+.mute-btn {
+  position: absolute;
+  bottom: 48px;
+  left: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 18px;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s, opacity 0.15s;
+  z-index: 5;
+  padding: 0;
+  line-height: 1;
+}
+.mute-btn:hover { background: rgba(0, 0, 0, 0.75); }
+.mute-btn.muted { opacity: 0.6; }
+.mute-btn.muted:hover { opacity: 1; }
+
 /* ─── Sidebar Toggle ────────────────────────────────────────────────────────── */
 .sidebar-toggle-btn {
   position: absolute;
@@ -225,7 +251,7 @@
   width: 100%;
   background: none;
   border: none;
-  padding: 10px 16px;
+  padding: 13px 16px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -251,7 +277,7 @@
   text-align: center;
 }
 
-.section-body { padding: 12px 14px; }
+.section-body { padding: 16px 16px; }
 
 /* ─── Controls ──────────────────────────────────────────────────────────────── */
 .controls-row {
@@ -276,6 +302,8 @@
 .ctrl-btn.pause:hover:not(:disabled) { background: var(--border); }
 .ctrl-btn.resume { background: var(--success); color: #fff; }
 .ctrl-btn.resume:hover:not(:disabled) { opacity: 0.85; }
+.ctrl-btn.skip { background: var(--surface3); color: var(--text); border: 1px solid var(--border); }
+.ctrl-btn.skip:hover:not(:disabled) { background: var(--border); }
 .ctrl-btn.stop { background: var(--danger); color: #fff; }
 .ctrl-btn.stop:hover:not(:disabled) { opacity: 0.85; }
 
@@ -640,4 +668,12 @@
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(16px) scale(0.97); }
   to   { opacity: 1; transform: none; }
+}
+
+/* ─── Wider sidebar on ultra-wide screens ───────────────────────────────────── */
+@media (min-aspect-ratio: 16/9) {
+  :root { --sidebar-w: 400px; }
+}
+@media (min-aspect-ratio: 21/9) {
+  :root { --sidebar-w: 500px; }
 }

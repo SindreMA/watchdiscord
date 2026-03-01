@@ -125,7 +125,12 @@ export default function App() {
 
   // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeSection, setActiveSection] = useState<string | null>('controls');
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    () => new Set(['controls', 'search', 'sounds', 'tts', 'queue', 'logs'])
+  );
+
+  // Video mute
+  const [muted, setMuted] = useState(true);
 
   // Data
   const [sounds, setSounds] = useState<Sound[]>([]);
@@ -220,28 +225,35 @@ export default function App() {
     axios.get<QueueItem[]>(`${WATCH_API}/${guildId}`).then(res => {
       const events = res.data || [];
       if (!events.length) return;
-      // Find last meaningful event
+
       const last = events[events.length - 1];
-      if (last.type === 'play') {
-        handlePlayEvent(last);
-      } else if (last.type === 'pause') {
-        const lastPlay = [...events].reverse().find(e => e.type === 'play');
-        if (lastPlay) {
-          const src = lastPlay.streamUrl ||
-            `https://stream.sindrema.com/${encodeURIComponent(lastPlay.friendlyName)}${lastPlay.fileType}`;
-          setVideoSrc(src);
-          setCurrentTitle(decodeTitle(lastPlay.friendlyName));
-          setCurrentYtUrl(lastPlay.youtubeUrl || '');
-          setIsPlaying(true);
-          setIsPaused(true);
-          // Set to paused position
-          setTimeout(() => {
-            const vid = videoRef.current;
-            if (vid) {
-              vid.currentTime = Math.max(0, (Date.now() - lastPlay.started) / 1000);
-            }
-          }, 200);
-        }
+      if (last.type === 'stop') return;
+
+      // Find the last play event for video source/title info
+      const lastPlay = [...events].reverse().find(e => e.type === 'play');
+      if (!lastPlay) return;
+
+      const src = lastPlay.streamUrl ||
+        `https://stream.sindrema.com/${encodeURIComponent(lastPlay.friendlyName)}${lastPlay.fileType}`;
+
+      if (last.type === 'pause') {
+        setVideoSrc(src);
+        setCurrentTitle(decodeTitle(lastPlay.friendlyName));
+        setCurrentYtUrl(lastPlay.youtubeUrl || '');
+        setIsPlaying(true);
+        setIsPaused(true);
+        // Approximate paused position: time elapsed between play start and pause event
+        setTimeout(() => {
+          const vid = videoRef.current;
+          if (vid) {
+            vid.currentTime = Math.max(0, (last.started - lastPlay.started) / 1000);
+          }
+        }, 200);
+      } else {
+        // play or resume — video is currently running
+        // For resume events, we approximate by using the last play's started time.
+        // This may drift if there were pauses, but at least shows the video playing.
+        handlePlayEvent(lastPlay);
       }
     }).catch(() => {});
 
@@ -318,6 +330,20 @@ export default function App() {
     if (!requireUser()) return;
     try { await post(`/api/control/${guildId}/stop`, { username }); }
     catch { addToast('Could not stop', 'warning'); }
+  };
+
+  const handleSkip = async () => {
+    if (!requireUser()) return;
+    try { await post(`/api/control/${guildId}/skip`, { username }); }
+    catch { addToast('Could not skip', 'warning'); }
+  };
+
+  const toggleMute = () => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    const next = !vid.muted;
+    vid.muted = next;
+    setMuted(next);
   };
 
   // ─── YouTube search ───────────────────────────────────────────────────────────
@@ -407,7 +433,11 @@ export default function App() {
   // ─── Section toggle ───────────────────────────────────────────────────────────
 
   const toggleSection = (id: string) =>
-    setActiveSection(prev => (prev === id ? null : id));
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
 
   const filteredSounds = soundFilter
     ? sounds.filter(s => s.name.toLowerCase().includes(soundFilter.toLowerCase()))
@@ -423,7 +453,7 @@ export default function App() {
         {/* Video */}
         <div className="video-area">
           {videoSrc
-            ? <video ref={videoRef} src={videoSrc} className="video" playsInline muted />
+            ? <video ref={videoRef} src={videoSrc} className="video" playsInline muted={muted} />
             : (
               <div className="video-empty">
                 <div className="video-empty-icon">🎵</div>
@@ -443,6 +473,14 @@ export default function App() {
               )}
             </div>
           )}
+
+          <button
+            className={`mute-btn${muted ? ' muted' : ''}`}
+            onClick={toggleMute}
+            title={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
 
           <button
             className="sidebar-toggle-btn"
@@ -486,12 +524,13 @@ export default function App() {
           <div className="sidebar-content">
 
             {/* Controls */}
-            <SidebarSection id="controls" title="Controls" active={activeSection === 'controls'} onToggle={toggleSection}>
+            <SidebarSection id="controls" title="Controls" active={openSections.has('controls')} onToggle={toggleSection}>
               <div className="controls-row">
                 {isPaused
                   ? <button className="ctrl-btn resume" onClick={handleResume}>▶ Resume</button>
                   : <button className="ctrl-btn pause" onClick={handlePause} disabled={!isPlaying}>⏸ Pause</button>
                 }
+                <button className="ctrl-btn skip" onClick={handleSkip} disabled={!isPlaying}>⏭ Skip</button>
                 <button className="ctrl-btn stop" onClick={handleStop} disabled={!isPlaying}>⏹ Stop</button>
               </div>
               <div className={`playback-status${isPlaying ? (isPaused ? ' paused' : ' playing') : ''}`}>
@@ -501,7 +540,7 @@ export default function App() {
             </SidebarSection>
 
             {/* YouTube Search */}
-            <SidebarSection id="search" title="YouTube Search" active={activeSection === 'search'} onToggle={toggleSection}>
+            <SidebarSection id="search" title="YouTube Search" active={openSections.has('search')} onToggle={toggleSection}>
               <div className="search-input-row">
                 <input
                   className="search-input"
@@ -531,7 +570,7 @@ export default function App() {
             </SidebarSection>
 
             {/* Sounds */}
-            <SidebarSection id="sounds" title="Sounds" active={activeSection === 'sounds'} onToggle={toggleSection} badge={sounds.length} onOpen={loadSounds}>
+            <SidebarSection id="sounds" title="Sounds" active={openSections.has('sounds')} onToggle={toggleSection} badge={sounds.length} onOpen={loadSounds}>
               <audio ref={previewAudioRef} onEnded={() => setPreviewingSound(null)} />
               {sounds.length > 6 && (
                 <input
@@ -563,7 +602,7 @@ export default function App() {
             </SidebarSection>
 
             {/* TTS */}
-            <SidebarSection id="tts" title="Text to Speech" active={activeSection === 'tts'} onToggle={toggleSection}>
+            <SidebarSection id="tts" title="Text to Speech" active={openSections.has('tts')} onToggle={toggleSection}>
               <div className="tts-panel">
                 <textarea
                   className="tts-input"
@@ -580,7 +619,7 @@ export default function App() {
             </SidebarSection>
 
             {/* Queue */}
-            <SidebarSection id="queue" title="Queue" active={activeSection === 'queue'} onToggle={toggleSection} badge={queue.length} onOpen={loadQueue}>
+            <SidebarSection id="queue" title="Queue" active={openSections.has('queue')} onToggle={toggleSection} badge={queue.length} onOpen={loadQueue}>
               <div className="queue-list">
                 {queue.length === 0 && <div className="empty-msg">Queue is empty</div>}
                 {queue.map((item, i) => (
@@ -596,7 +635,7 @@ export default function App() {
             </SidebarSection>
 
             {/* Activity */}
-            <SidebarSection id="logs" title="Activity" active={activeSection === 'logs'} onToggle={toggleSection} onOpen={loadLogs}>
+            <SidebarSection id="logs" title="Activity" active={openSections.has('logs')} onToggle={toggleSection} onOpen={loadLogs}>
               <div className="logs-list">
                 {logs.length === 0 && <div className="empty-msg">No activity yet</div>}
                 {logs.slice(0, 40).map((log, i) => (
