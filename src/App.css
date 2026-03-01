@@ -125,6 +125,24 @@
   pointer-events: none;
 }
 
+/* ─── Click-to-pause indicator ─────────────────────────────────────────────── */
+.click-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 52px;
+  pointer-events: none;
+  z-index: 10;
+  animation: clickFade 0.7s ease forwards;
+}
+
+@keyframes clickFade {
+  0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+  40%  { opacity: 0.85; transform: translate(-50%, -50%) scale(1.1); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.5); }
+}
+
 /* ─── Mute Button ───────────────────────────────────────────────────────────── */
 .mute-btn {
   position: absolute;

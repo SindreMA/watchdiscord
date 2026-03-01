@@ -132,7 +132,6 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTitle, setCurrentTitle] = useState('');
-  const [currentYtUrl, setCurrentYtUrl] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -144,6 +143,8 @@ export default function App() {
 
   // Video mute
   const [muted, setMuted] = useState(true);
+  const [clickIcon, setClickIcon] = useState<'play' | 'pause' | null>(null);
+  const clickIconTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   // Sync offset — positive = seek further ahead (compensate for video being behind Discord)
   // Default comes from build-time env: REACT_APP_VIDEO_OFFSET_S=2
@@ -227,7 +228,6 @@ export default function App() {
     syncRef.current = { started: item.started, needSeek: true, needFinalSync: false };
     setVideoSrc(src);
     setCurrentTitle(decodeTitle(item.friendlyName));
-    setCurrentYtUrl(item.youtubeUrl || '');
     setIsPlaying(true);
     setIsPaused(false);
   }, []);
@@ -258,7 +258,6 @@ export default function App() {
       if (last.type === 'pause') {
         setVideoSrc(src);
         setCurrentTitle(decodeTitle(lastPlay.friendlyName));
-        setCurrentYtUrl(lastPlay.youtubeUrl || '');
         setIsPlaying(true);
         setIsPaused(true);
         // Approximate paused position: time elapsed between play start and pause event
@@ -311,7 +310,6 @@ export default function App() {
         setIsPlaying(false);
         setIsPaused(false);
         setCurrentTitle('');
-        setCurrentYtUrl('');
         setQueue([]);
         addToast('⏹  Playback stopped', 'warning');
         loadLogs();
@@ -356,6 +354,20 @@ export default function App() {
     if (!requireUser()) return;
     try { await post(`/api/control/${guildId}/skip`, { username }); }
     catch { addToast('Could not skip', 'warning'); }
+  };
+
+  const handleVideoClick = () => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    clearTimeout(clickIconTimeout.current);
+    if (vid.paused) {
+      vid.play().catch(() => {});
+      setClickIcon('play');
+    } else {
+      vid.pause();
+      setClickIcon('pause');
+    }
+    clickIconTimeout.current = setTimeout(() => setClickIcon(null), 700);
   };
 
   const toggleMute = () => {
@@ -516,6 +528,7 @@ export default function App() {
                     vid.currentTime = expected;
                   }
                 }}
+                onClick={handleVideoClick}
               />
             : (
               <div className="video-empty">
@@ -526,15 +539,16 @@ export default function App() {
             )
           }
 
+          {clickIcon && (
+            <div key={clickIcon} className="click-indicator">
+              {clickIcon === 'pause' ? '⏸' : '▶'}
+            </div>
+          )}
+
           {currentTitle && (
             <div className="video-info">
               <div className="video-info-row">
                 <span className="video-title">{currentTitle}</span>
-                {currentYtUrl && (
-                  <a className="video-ytlink" href={currentYtUrl} target="_blank" rel="noreferrer">
-                    YouTube ↗
-                  </a>
-                )}
                 {duration > 0 && (
                   <span className="video-time">
                     {formatDuration(currentTime)} / {formatDuration(duration)}
