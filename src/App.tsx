@@ -145,6 +145,15 @@ export default function App() {
   // Video mute
   const [muted, setMuted] = useState(true);
 
+  // Sync offset — positive = seek further ahead (compensate for video being behind Discord)
+  // Default comes from build-time env: REACT_APP_VIDEO_OFFSET_S=2
+  const [offsetS, setOffsetS] = useState(() =>
+    parseFloat((process.env.REACT_APP_VIDEO_OFFSET_S as string) || '0')
+  );
+
+  // TTS voice
+  const [ttsVoice, setTtsVoice] = useState('Salli');
+
   // Data
   const [sounds, setSounds] = useState<Sound[]>([]);
   const [soundFilter, setSoundFilter] = useState('');
@@ -357,11 +366,22 @@ export default function App() {
     setMuted(next);
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  const seekToRatio = useCallback((clientX: number) => {
     const vid = videoRef.current;
-    if (!vid || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    vid.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
+    const el = progressRef.current;
+    if (!vid || !el || !duration) return;
+    const rect = el.getBoundingClientRect();
+    vid.currentTime = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * duration;
+  }, [duration]);
+
+  const onProgressPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    seekToRatio(e.clientX);
+  };
+  const onProgressPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.buttons === 1) seekToRatio(e.clientX);
   };
 
   // ─── YouTube search ───────────────────────────────────────────────────────────
@@ -428,7 +448,7 @@ export default function App() {
     if (!requireUser() || !ttsText.trim()) return;
     setTtsBusy(true);
     try {
-      await post(`/api/control/${guildId}/tts`, { text: ttsText, username });
+      await post(`/api/control/${guildId}/tts`, { text: ttsText, voice: ttsVoice, username });
       addToast('📢 TTS sent!', 'success');
       setTtsText('');
     } catch {
@@ -484,14 +504,14 @@ export default function App() {
                   syncRef.current.needSeek = false;
                   syncRef.current.needFinalSync = true;
                   const vid = e.currentTarget;
-                  vid.currentTime = Math.max(0, (Date.now() - syncRef.current.started) / 1000);
+                  vid.currentTime = Math.max(0, (Date.now() - syncRef.current.started) / 1000 + offsetS);
                   vid.play().catch(() => {});
                 }}
                 onPlaying={(e: React.SyntheticEvent<HTMLVideoElement>) => {
                   if (!syncRef.current.needFinalSync) return;
                   syncRef.current.needFinalSync = false;
                   const vid = e.currentTarget;
-                  const expected = Math.max(0, (Date.now() - syncRef.current.started) / 1000);
+                  const expected = Math.max(0, (Date.now() - syncRef.current.started) / 1000 + offsetS);
                   if (Math.abs(vid.currentTime - expected) > 0.3) {
                     vid.currentTime = expected;
                   }
@@ -521,7 +541,12 @@ export default function App() {
                   </span>
                 )}
               </div>
-              <div className="progress-wrap" onClick={handleSeek}>
+              <div
+                ref={progressRef}
+                className="progress-wrap"
+                onPointerDown={onProgressPointerDown}
+                onPointerMove={onProgressPointerMove}
+              >
                 <div
                   className="progress-fill"
                   style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
@@ -593,6 +618,18 @@ export default function App() {
                 <span className="status-dot" />
                 {isPlaying ? (isPaused ? 'Paused' : 'Playing') : 'Idle'}
               </div>
+              <div className="offset-row">
+                <label className="offset-label" htmlFor="offset-input">Sync offset</label>
+                <input
+                  id="offset-input"
+                  className="offset-input"
+                  type="number"
+                  step="0.5"
+                  value={offsetS}
+                  onChange={e => setOffsetS(parseFloat(e.target.value) || 0)}
+                />
+                <span className="offset-unit">s</span>
+              </div>
             </SidebarSection>
 
             {/* YouTube Search */}
@@ -660,6 +697,18 @@ export default function App() {
             {/* TTS */}
             <SidebarSection id="tts" title="Text to Speech" active={openSections.has('tts')} onToggle={toggleSection}>
               <div className="tts-panel">
+                <select
+                  className="tts-voice-select"
+                  value={ttsVoice}
+                  onChange={e => setTtsVoice(e.target.value)}
+                >
+                  <option value="Salli">Salli (EN-F)</option>
+                  <option value="Joanna">Joanna (EN-F)</option>
+                  <option value="Joey">Joey (EN-M)</option>
+                  <option value="Matthew">Matthew (EN-M)</option>
+                  <option value="Maxim">Maxim (RU-M)</option>
+                  <option value="Hans">Hans (DE-M)</option>
+                </select>
                 <textarea
                   className="tts-input"
                   value={ttsText}

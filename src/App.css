@@ -123,7 +123,6 @@
   background: var(--accent);
   border-radius: 0 2px 2px 0;
   pointer-events: none;
-  transition: width 0.25s linear;
 }
 
 /* ─── Mute Button ───────────────────────────────────────────────────────────── */
@@ -518,8 +517,49 @@
 .icon-btn.active { color: var(--accent-h); }
 .icon-btn.send:hover { color: var(--accent-h); }
 
+/* ─── Offset row ────────────────────────────────────────────────────────────── */
+.offset-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.offset-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: 1;
+}
+.offset-input {
+  width: 62px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  padding: 4px 6px;
+  font-size: 12px;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.offset-input:focus { border-color: var(--accent); }
+.offset-unit { font-size: 12px; color: var(--text-muted); }
+
 /* ─── TTS ───────────────────────────────────────────────────────────────────── */
 .tts-panel { display: flex; flex-direction: column; gap: 8px; }
+.tts-voice-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.tts-voice-select:focus { border-color: var(--accent); }
 .tts-input {
   background: var(--surface2);
   border: 1px solid var(--border);
