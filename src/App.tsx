@@ -75,6 +75,13 @@ function decodeTitle(name: string): string {
   try { return decodeURIComponent(name); } catch { return name; }
 }
 
+function formatDuration(secs: number): string {
+  if (!secs || !isFinite(secs)) return '0:00';
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 // ─── SidebarSection ──────────────────────────────────────────────────────────
 
 interface SectionProps {
@@ -122,6 +129,8 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [currentTitle, setCurrentTitle] = useState('');
   const [currentYtUrl, setCurrentYtUrl] = useState('');
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   // Sidebar
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -346,6 +355,13 @@ export default function App() {
     setMuted(next);
   };
 
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const vid = videoRef.current;
+    if (!vid || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    vid.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
+  };
+
   // ─── YouTube search ───────────────────────────────────────────────────────────
 
   const handleSearch = async () => {
@@ -453,7 +469,15 @@ export default function App() {
         {/* Video */}
         <div className="video-area">
           {videoSrc
-            ? <video ref={videoRef} src={videoSrc} className="video" playsInline muted={muted} />
+            ? <video
+                ref={videoRef}
+                src={videoSrc}
+                className="video"
+                playsInline
+                muted={muted}
+                onTimeUpdate={(e: React.SyntheticEvent<HTMLVideoElement>) => setCurrentTime(e.currentTarget.currentTime)}
+                onDurationChange={(e: React.SyntheticEvent<HTMLVideoElement>) => setDuration(e.currentTarget.duration)}
+              />
             : (
               <div className="video-empty">
                 <div className="video-empty-icon">🎵</div>
@@ -465,12 +489,25 @@ export default function App() {
 
           {currentTitle && (
             <div className="video-info">
-              <span className="video-title">{currentTitle}</span>
-              {currentYtUrl && (
-                <a className="video-ytlink" href={currentYtUrl} target="_blank" rel="noreferrer">
-                  YouTube ↗
-                </a>
-              )}
+              <div className="video-info-row">
+                <span className="video-title">{currentTitle}</span>
+                {currentYtUrl && (
+                  <a className="video-ytlink" href={currentYtUrl} target="_blank" rel="noreferrer">
+                    YouTube ↗
+                  </a>
+                )}
+                {duration > 0 && (
+                  <span className="video-time">
+                    {formatDuration(currentTime)} / {formatDuration(duration)}
+                  </span>
+                )}
+              </div>
+              <div className="progress-wrap" onClick={handleSeek}>
+                <div
+                  className="progress-fill"
+                  style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </div>
             </div>
           )}
 
