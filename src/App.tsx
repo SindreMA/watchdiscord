@@ -548,7 +548,6 @@ export default function App() {
           {currentTitle && (
             <div className="video-info">
               <div className="video-info-row">
-                <span className="video-title">{currentTitle}</span>
                 {duration > 0 && (
                   <span className="video-time">
                     {formatDuration(currentTime)} / {formatDuration(duration)}
