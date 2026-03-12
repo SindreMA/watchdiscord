@@ -192,6 +192,16 @@ export default function App() {
   const previewAudioRef = useRef<HTMLAudioElement>(null);
   const [previewingSound, setPreviewingSound] = useState<string | null>(null);
 
+  // Sound upload
+  const uploadAudioRef = useRef<HTMLAudioElement>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
+  const [uploadPlaying, setUploadPlaying] = useState(false);
+  const [uploadVolume, setUploadVolume] = useState(1);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadName, setUploadName] = useState('');
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -496,6 +506,95 @@ export default function App() {
       audio.play().catch(() => {});
     });
     setPreviewingSound(sound.name);
+  };
+
+  // ─── Sound download ─────────────────────────────────────────────────────────
+
+  const handleDownloadSound = (sound: Sound) => {
+    const link = document.createElement('a');
+    link.href = `${BOT_API}/sounds/${encodeURIComponent(sound.filename)}`;
+    link.download = sound.filename;
+    link.click();
+  };
+
+  // ─── Sound upload ──────────────────────────────────────────────────────────
+
+  const handleUploadFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Revoke previous URL
+    if (uploadPreviewUrl) URL.revokeObjectURL(uploadPreviewUrl);
+    const url = URL.createObjectURL(file);
+    setUploadFile(file);
+    setUploadPreviewUrl(url);
+    setUploadVolume(1);
+    setUploadPlaying(false);
+  };
+
+  const handleUploadPreviewToggle = () => {
+    const audio = uploadAudioRef.current;
+    if (!audio || !uploadPreviewUrl) return;
+    if (uploadPlaying) {
+      audio.pause();
+      setUploadPlaying(false);
+    } else {
+      audio.volume = uploadVolume;
+      audio.play().catch(() => {});
+      setUploadPlaying(true);
+    }
+  };
+
+  const handleUploadVolumeChange = (val: number) => {
+    setUploadVolume(val);
+    const audio = uploadAudioRef.current;
+    // Browser audio.volume is capped at 1; above that is boost-only for the backend
+    if (audio) audio.volume = Math.min(val, 1);
+  };
+
+  // Convert slider value (0–2) to dB for the backend
+  const volumeToDb = (v: number): number => {
+    if (v <= 0) return -60;
+    return Math.round(20 * Math.log10(v) * 10) / 10;
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!uploadFile || !requireUser()) return;
+    const name = uploadName.trim();
+    if (!name) { addToast('Enter a sound name', 'warning'); return; }
+    setUploadBusy(true);
+    try {
+      const boostDb = volumeToDb(uploadVolume);
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('name', name);
+      formData.append('username', username);
+      if (boostDb !== 0) formData.append('boost', boostDb.toString());
+      await axios.post(`${BOT_API}/api/control/sounds/upload`, formData);
+      addToast(`Uploaded: ${name}`, 'success');
+      setUploadFile(null);
+      if (uploadPreviewUrl) URL.revokeObjectURL(uploadPreviewUrl);
+      setUploadPreviewUrl(null);
+      setUploadPlaying(false);
+      setUploadVolume(1);
+      setUploadName('');
+      if (uploadInputRef.current) uploadInputRef.current.value = '';
+      loadSounds();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Could not upload sound';
+      addToast(msg, 'warning');
+    } finally {
+      setUploadBusy(false);
+    }
+  };
+
+  const handleUploadCancel = () => {
+    setUploadFile(null);
+    if (uploadPreviewUrl) URL.revokeObjectURL(uploadPreviewUrl);
+    setUploadPreviewUrl(null);
+    setUploadPlaying(false);
+    setUploadVolume(1);
+    setUploadName('');
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
   };
 
   // ─── TTS ─────────────────────────────────────────────────────────────────────
@@ -812,10 +911,85 @@ export default function App() {
                       >
                         {previewingSound === s.name ? '⏸' : '▶'}
                       </button>
+                      <button className="icon-btn" onClick={() => handleDownloadSound(s)} title="Download">⬇</button>
                       <button className="icon-btn send" onClick={() => handlePlaySound(s.name)} title="Play in Discord">🎵</button>
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Upload */}
+              <div className="upload-panel">
+                <div className="upload-header">Upload Sound</div>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleUploadFileSelect}
+                  className="upload-file-input"
+                  id="sound-upload-input"
+                />
+                {!uploadFile && (
+                  <label htmlFor="sound-upload-input" className="upload-drop-label">
+                    Choose an audio file…
+                  </label>
+                )}
+                {uploadFile && uploadPreviewUrl && (
+                  <div className="upload-preview">
+                    <audio
+                      ref={uploadAudioRef}
+                      src={uploadPreviewUrl}
+                      onEnded={() => setUploadPlaying(false)}
+                    />
+                    <div className="upload-file-info">
+                      <span className="upload-file-name">{uploadFile.name}</span>
+                      <button className="icon-btn" onClick={handleUploadCancel} title="Remove">✕</button>
+                    </div>
+                    <input
+                      className="upload-name-input"
+                      type="text"
+                      placeholder="Sound name…"
+                      value={uploadName}
+                      onChange={e => setUploadName(e.target.value)}
+                      maxLength={64}
+                    />
+                    <div className="upload-controls">
+                      <button
+                        className={`icon-btn${uploadPlaying ? ' active' : ''}`}
+                        onClick={handleUploadPreviewToggle}
+                        title="Preview"
+                      >
+                        {uploadPlaying ? '⏸' : '▶'}
+                      </button>
+                      <input
+                        className="volume-slider upload-volume-slider"
+                        type="range"
+                        min="0"
+                        max="2"
+                        step="0.01"
+                        value={uploadVolume}
+                        onChange={e => handleUploadVolumeChange(parseFloat(e.target.value))}
+                      />
+                      <span className="upload-boost-label">
+                        {(() => {
+                          const db = volumeToDb(uploadVolume);
+                          if (db === 0) return '0 dB';
+                          return `${db > 0 ? '+' : ''}${db} dB`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="upload-boost-hint">
+                      Adjust volume to preview boost — sent as dB to Discord
+                    </div>
+                    <button
+                      className="btn-primary"
+                      onClick={handleUploadSubmit}
+                      disabled={uploadBusy || !uploadName.trim()}
+                    >
+                      {uploadBusy ? 'Uploading…' : '⬆ Upload Sound'}
+                    </button>
+                  </div>
+                )}
               </div>
             </SidebarSection>
 

@@ -590,6 +590,92 @@
 .icon-btn.active { color: var(--accent-h); }
 .icon-btn.send:hover { color: var(--accent-h); }
 
+/* ─── Sound Upload ─────────────────────────────────────────────────────────── */
+.upload-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.upload-header {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.upload-file-input {
+  display: none;
+}
+.upload-drop-label {
+  display: block;
+  text-align: center;
+  padding: 14px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.upload-drop-label:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.upload-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.upload-file-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.upload-file-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload-name-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.upload-name-input:focus { border-color: var(--accent); }
+.upload-name-input::placeholder { color: var(--text-muted); }
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.upload-volume-slider {
+  flex: 1;
+}
+.upload-boost-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.upload-boost-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
 /* ─── Offset row ────────────────────────────────────────────────────────────── */
 .offset-row {
   display: flex;
