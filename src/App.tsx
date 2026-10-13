@@ -1012,6 +1012,7 @@ export default function App() {
                   {/* Cloned voices; Juky sends these to the voice TTS server (VOICE_TTS_URL) */}
                   <optgroup label="Friends (cloned)">
                     <option value="SindreMA">SindreMA</option>
+                    <option value="sindrema_good">SindreMA (good mic)</option>
                     <option value="Reefer_dps">Reefer_dps</option>
                     <option value="Lillith">Lillith</option>
                   </optgroup>
