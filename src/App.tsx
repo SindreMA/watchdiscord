@@ -1001,12 +1001,20 @@ export default function App() {
                   value={ttsVoice}
                   onChange={e => setTtsVoice(e.target.value)}
                 >
-                  <option value="Salli">Salli (EN-F)</option>
-                  <option value="Joanna">Joanna (EN-F)</option>
-                  <option value="Joey">Joey (EN-M)</option>
-                  <option value="Matthew">Matthew (EN-M)</option>
-                  <option value="Maxim">Maxim (RU-M)</option>
-                  <option value="Hans">Hans (DE-M)</option>
+                  <optgroup label="Polly">
+                    <option value="Salli">Salli (EN-F)</option>
+                    <option value="Joanna">Joanna (EN-F)</option>
+                    <option value="Joey">Joey (EN-M)</option>
+                    <option value="Matthew">Matthew (EN-M)</option>
+                    <option value="Maxim">Maxim (RU-M)</option>
+                    <option value="Hans">Hans (DE-M)</option>
+                  </optgroup>
+                  {/* Cloned voices; Juky sends these to the voice TTS server (VOICE_TTS_URL) */}
+                  <optgroup label="Friends (cloned)">
+                    <option value="SindreMA">SindreMA</option>
+                    <option value="Reefer_dps">Reefer_dps</option>
+                    <option value="Lillith">Lillith</option>
+                  </optgroup>
                 </select>
                 <textarea
                   className="tts-input"
