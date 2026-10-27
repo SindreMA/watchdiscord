@@ -1017,6 +1017,12 @@ export default function App() {
                     <option value="Lillith">Lillith</option>
                     <option value="Timo">Timo</option>
                   </optgroup>
+                  {/* Fine-tuned GPT-SoVITS voices, same server; trained on all of each person's clips */}
+                  <optgroup label="Friends (trained)">
+                    <option value="Reefer_dps_trained">Reefer_dps</option>
+                    <option value="Lillith_trained">Lillith</option>
+                    <option value="Timo_trained">Timo</option>
+                  </optgroup>
                 </select>
                 <textarea
                   className="tts-input"
