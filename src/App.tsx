@@ -1015,6 +1015,7 @@ export default function App() {
                     <option value="sindrema_good">SindreMA (good mic)</option>
                     <option value="Reefer_dps">Reefer_dps</option>
                     <option value="Lillith">Lillith</option>
+                    <option value="Timo">Timo</option>
                   </optgroup>
                 </select>
                 <textarea
