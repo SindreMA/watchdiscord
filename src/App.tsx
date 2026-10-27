@@ -1025,6 +1025,13 @@ export default function App() {
                     <option value="Lillith_trained">Lillith</option>
                     <option value="Timo_trained">Timo</option>
                   </optgroup>
+                  {/* Fine-tuned VoxCPM2 voices, same server; best match to the real voices */}
+                  <optgroup label="Friends (VoxCPM2)">
+                    <option value="sindrema_good_voxcpm">SindreMA (good mic)</option>
+                    <option value="Reefer_dps_voxcpm">Reefer_dps</option>
+                    <option value="Lillith_voxcpm">Lillith</option>
+                    <option value="Timo_voxcpm">Timo</option>
+                  </optgroup>
                 </select>
                 <textarea
                   className="tts-input"
